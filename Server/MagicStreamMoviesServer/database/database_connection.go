@@ -1,51 +1,54 @@
 package database
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func Connect() *mongo.Client {
-	err := godotenv.Load(".env")
-
-	if err != nil {
+func Connect() (*mongo.Client, error) {
+	if err := godotenv.Load(".env"); err != nil {
 		log.Println("Warning: unable to find .env file")
 	}
 
-	MongoDb := os.Getenv("MONGODB_URI")
-
-	if MongoDb == "" {
-		log.Fatal("MONGODB_URI not set!")
+	uri := os.Getenv("MONGODB_URI")
+	if uri == "" {
+		return nil, errors.New("MONGODB_URI not set")
 	}
 
-	fmt.Println("MongoDB URI:", MongoDb)
+	log.Println("MONGODB_URI is set")
 
-	clientOptions := options.Client().ApplyURI(MongoDb)
+	clientOptions := options.Client().ApplyURI(uri)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	client, err := mongo.Connect(clientOptions)
-
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	return client
+	if err := client.Ping(ctx, nil); err != nil {
+		return nil, err
+	}
+
+	return client, nil
 }
 
-
-
-func OpenCollection(collectionName string,client*mongo.Client) *mongo.Collection {
+func OpenCollection(collectionName string, client *mongo.Client) *mongo.Collection {
 	databaseName := os.Getenv("DATABASE_NAME")
 
 	if databaseName == "" {
 		log.Fatal("DATABASE_NAME not set!")
 	}
 
-	fmt.Println("DATABASE_NAME: ", databaseName)
+	log.Println("DATABASE_NAME:", databaseName)
 
 	collection := client.Database(databaseName).Collection(collectionName)
 

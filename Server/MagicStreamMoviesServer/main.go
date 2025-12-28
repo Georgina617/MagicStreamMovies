@@ -48,14 +48,9 @@ func main() {
 	router.Use(gin.Logger())
 
 	// Connect to MongoDB safely
-	client := database.Connect()
-	if client == nil {
-		log.Fatal("MongoDB client is nil. Check MONGO_URI environment variable.")
-	}
-
-	// Ping MongoDB
-	if err := client.Ping(context.Background(), nil); err != nil {
-		log.Fatalf("Failed to reach MongoDB: %v", err)
+	client, err := database.Connect()
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
 	}
 	log.Println("MongoDB connection successful")
 
