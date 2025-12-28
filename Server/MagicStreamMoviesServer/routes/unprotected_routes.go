@@ -8,6 +8,12 @@ import (
 )
 
 func SetupUnProtectedRoutes(router *gin.Engine,client *mongo.Client){
+    router.GET("/", func(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"status":  "ok",
+		"service": "MagicStreamMovies API is running",
+	})
+})
 	
     router.GET("/movies", controller.GetMovies(client))
 	router.POST("/register", controller.RegisterUser(client))
