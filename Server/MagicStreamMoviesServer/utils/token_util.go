@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Georgina617/MagicStreamMovies/Server/MagicStreamMoviesServer/database"
@@ -92,22 +93,19 @@ func UpdateAllTokens(userId, token, refreshToken string, client *mongo.Client) (
 }
 
 func GetAccessToken(c *gin.Context) (string, error) {
-	// authHeader := c.Request.Header.Get("Authorization")
-	// if authHeader == "" {
-	// 	return "", errors.New("Authorization header is required")
-	// }
-	// tokenString := authHeader[len("Bearer "):]
-
-	// if tokenString == "" {
-	// 	return "", errors.New("Bearer token is required")
-	// }
+	// Try cookie first
 	tokenString, err := c.Cookie("access_token")
-	if err != nil {
-
-		return "", err
+	if err == nil && tokenString != "" {
+		return tokenString, nil
 	}
 
-	return tokenString, nil
+	// Fallback to Authorization header `Bearer <token>`
+	authHeader := c.Request.Header.Get("Authorization")
+	if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+		return strings.TrimPrefix(authHeader, "Bearer "), nil
+	}
+
+	return "", errors.New("access token not found")
 
 }
 

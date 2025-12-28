@@ -262,8 +262,8 @@ func RefreshTokenHandler(client *mongo.Client) gin.HandlerFunc {
 			return
 		}
 
-		c.SetCookie("access_token", newToken, 86400, "/", "localhost", true, true)          // expires in 24 hours
-		c.SetCookie("refresh_token", newRefreshToken, 604800, "/", "localhost", true, true) //expires in 1 week
+		c.SetCookie("access_token", newToken, 86400, "/", "", true, true)          // expires in 24 hours
+		c.SetCookie("refresh_token", newRefreshToken, 604800, "/", "", true, true) //expires in 1 week
 
 		c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed"})
 	}

@@ -10,9 +10,8 @@ import (
 func AuthMiddleWare() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token, err := utils.GetAccessToken(c)
-
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "authentication required"})
 			c.Abort()
 			return
 		}
