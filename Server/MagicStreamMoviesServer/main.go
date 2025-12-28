@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -72,8 +71,20 @@ func main() {
 	routes.SetupUnProtectedRoutes(router, client)
 	routes.SetupProtectedRoutes(router, client)
 
-	if err := router.Run(":8080"); err != nil {
-		fmt.Println("Failed to start server", err)
+	// health check route
+	router.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+		log.Println("PORT not set, defaulting to 8080")
+	}
+	addr := ":" + port
+	log.Printf("Starting server on %s", addr)
+	if err := router.Run(addr); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
 
 }
