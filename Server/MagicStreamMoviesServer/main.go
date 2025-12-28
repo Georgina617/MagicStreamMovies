@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -11,19 +12,26 @@ import (
 	"github.com/Georgina617/MagicStreamMovies/Server/MagicStreamMoviesServer/routes"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func main() {
-	// Create Gin router
+	// This is the main function
+
 	router := gin.Default()
 
-	// Simple test route
 	router.GET("/hello", func(c *gin.Context) {
 		c.String(200, "Hello, MagicStreamMovies!")
 	})
 
-	// CORS setup
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Println("Warning: unable to find .env file")
+	}
+
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+
 	var origins []string
 	if allowedOrigins != "" {
 		origins = strings.Split(allowedOrigins, ",")
@@ -36,48 +44,36 @@ func main() {
 		log.Println("Allowed Origin: http://localhost:5173")
 	}
 
-	config := cors.Config{
-		AllowOrigins:     origins,
-		AllowMethods:     []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}
+	config := cors.Config{}
+	config.AllowOrigins = origins
+	config.AllowMethods = []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"}
+	//config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
+	config.ExposeHeaders = []string{"Content-Length"}
+	config.AllowCredentials = true
+	config.MaxAge = 12 * time.Hour
+
 	router.Use(cors.New(config))
 	router.Use(gin.Logger())
 
-	// Connect to MongoDB safely
-	client, err := database.Connect()
-	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
-	}
-	log.Println("MongoDB connection successful")
+	var client *mongo.Client = database.Connect()
 
+	if err := client.Ping(context.Background(), nil); err != nil {
+		log.Fatalf("Failed to reach server: %v", err)
+	}
 	defer func() {
-		if err := client.Disconnect(context.Background()); err != nil {
-			log.Fatalf("Failed to disconnect MongoDB: %v", err)
+		err := client.Disconnect(context.Background())
+		if err != nil {
+			log.Fatalf("Failed to disconnect from MongoDB: %v", err)
 		}
+
 	}()
 
-	// Setup routes
 	routes.SetupUnProtectedRoutes(router, client)
 	routes.SetupProtectedRoutes(router, client)
 
-	// Health check route
-	router.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
+	if err := router.Run(":8080"); err != nil {
+		fmt.Println("Failed to start server", err)
+	}
 
-	// Get port from environment (Render sets PORT automatically)
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		log.Println("PORT not set, defaulting to 8080")
-	}
-	addr := ":" + port
-	log.Printf("Starting server on %s", addr)
-	if err := router.Run(addr); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
 }
